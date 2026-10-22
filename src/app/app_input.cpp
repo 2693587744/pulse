@@ -1336,12 +1336,27 @@ LRESULT HandleMouseMove(AppState* s, HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
         }
 
+        if (s->scrollbarDragging && s->scrollbarSettings) {
+            // Settings page bar: no tab involved, so it stops on the button
+            // going up rather than on the active tab disappearing.
+            if ((GetKeyState(VK_LBUTTON) & 0x8000) == 0) {
+                s->scrollbarDragging = false;
+                s->scrollbarSettings = false;
+                if (GetCapture() == hwnd) ReleaseCapture();
+            } else {
+                DragSettingsScrollbar(*s, my);
+            }
+            InvalidateRect(hwnd, nullptr, FALSE);
+            return 0;
+        }
+
         if (s->scrollbarDragging) {
             app::Tab* tab = ActiveTab(*s);
             if (!tab || (GetKeyState(VK_LBUTTON) & 0x8000) == 0) {
                 s->scrollbarDragging = false;
                 s->scrollbarHorizontal = false;
                 s->scrollbarSidebar = false;
+                s->scrollbarSettings = false;
                 if (GetCapture() == hwnd) ReleaseCapture();
             } else {
                 ui::WindowViewModel dragVm = BuildVm(*s);
@@ -2197,8 +2212,10 @@ LRESULT HandleMouseMove(AppState* s, HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 extra += 40.0f * s->scale;
         }
         float listTop = content.top + s->renderer.PaneHeaderHeight() + extra + s->renderer.ColumnHeaderHeight();
-        bool sbHit = (mx >= content.right - 14 * s->scale && mx < content.right &&
-                      my >= listTop && my < content.bottom);
+        // The settings page has its own bar; the pane one is not drawn there.
+        bool sbHit = !vm.settings_open &&
+            (mx >= content.right - 14 * s->scale && mx < content.right &&
+             my >= listTop && my < content.bottom);
         if (sbHit != s->scrollbarHovered) {
             s->scrollbarHovered = sbHit;
             InvalidateRect(hwnd, nullptr, FALSE);
@@ -2367,6 +2384,13 @@ LRESULT HandleLButtonDown(AppState* s, HWND hwnd, UINT msg, WPARAM wParam, LPARA
             s->detailsPreviewFoldStart = GetTickCount64();
             s->detailsScroll = 0;
             s->dragPending = false;
+            InvalidateRect(hwnd, nullptr, FALSE);
+            return 0;
+        }
+        if (hit.region == ui::HitTestResult::Scrollbar && hit.sub_index == 3) {
+            // Settings page: the same press/drag gestures as the pane bars.
+            s->dragPending = false;
+            if (BeginSettingsScrollbarDrag(*s, vm, my)) SetCapture(hwnd);
             InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
         }
@@ -3634,6 +3658,7 @@ LRESULT HandleLButtonUp(AppState* s, HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             s->scrollbarDragging = false;
             s->scrollbarHorizontal = false;
             s->scrollbarSidebar = false;
+            s->scrollbarSettings = false;
             s->splitterDragging = false;
             s->detailsPanelResizing = false;
             s->columnResizing = false;
@@ -3718,6 +3743,7 @@ LRESULT HandleCaptureChanged(AppState* s, HWND hwnd, UINT msg, WPARAM wParam, LP
             s->scrollbarDragging = false;
             s->scrollbarHorizontal = false;
             s->scrollbarSidebar = false;
+            s->scrollbarSettings = false;
             s->splitterDragging = false;
             s->splitterDragIndex = -1;
             s->tabDragPending = false;

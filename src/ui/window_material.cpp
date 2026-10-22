@@ -13,6 +13,7 @@
 #include <d2d1effects_2.h>
 #include <d3d11.h>
 #include <dxgi.h>
+#include <shlobj.h>
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -467,6 +468,27 @@ bool SystemAllowsPopupAcrylic() noexcept {
 
 bool WindowEffectUsesBackdrop(WindowEffect effect) noexcept {
     return effect != WindowEffect::None;
+}
+
+bool SystemSupportsDwmBackdrop() noexcept {
+    return compat::ModernWindows() && IsWindows11OrLater() && !IsHighContrast();
+}
+
+std::wstring DesktopWallpaperPath() {
+    wchar_t wallpaper[MAX_PATH * 4]{};
+    if (SystemParametersInfoW(SPI_GETDESKWALLPAPER, ARRAYSIZE(wallpaper), wallpaper, 0) &&
+        wallpaper[0] && GetFileAttributesW(wallpaper) != INVALID_FILE_ATTRIBUTES) {
+        return wallpaper;
+    }
+    // A slideshow, or a wallpaper the shell transcoded, is staged here without
+    // an extension.
+    wchar_t appdata[MAX_PATH]{};
+    if (FAILED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, appdata)))
+        return {};
+    std::wstring staged = std::wstring(appdata) +
+        L"\\Microsoft\\Windows\\Themes\\TranscodedWallpaper";
+    return GetFileAttributesW(staged.c_str()) == INVALID_FILE_ATTRIBUTES ? std::wstring{}
+                                                                        : staged;
 }
 
 bool ApplyWindowEffect(HWND hwnd, WindowEffect effect, bool dark) noexcept {
@@ -1060,7 +1082,7 @@ ID2D1Bitmap* WindowMaterial::EnsureBlurred(ID2D1DeviceContext* dc, const D2D1_RE
 
 ID2D1Bitmap* WindowMaterial::EnsureSampled(ID2D1DeviceContext* dc, const D2D1_RECT_F& dest,
                                            WindowEffect effect, bool dark,
-                                           const std::wstring& path) {
+                                           const std::wstring& path, float blur_scale) {
     ID2D1Bitmap* source = SourceBitmap(path);
     if (!dc || !source) return nullptr;
 
@@ -1073,7 +1095,8 @@ ID2D1Bitmap* WindowMaterial::EnsureSampled(ID2D1DeviceContext* dc, const D2D1_RE
     const int sh = (std::max)(2, static_cast<int>(dh * scale + 0.5f));
 
     if (sampled_.get() && sampled_dc_ == dc && sampled_path_ == path &&
-        sampled_effect_ == effect && sampled_dark_ == dark) {
+        sampled_effect_ == effect && sampled_dark_ == dark &&
+        sampled_blur_scale_ == blur_scale) {
         // Interactive resize can deliver a WM_SIZE for every pixel. Reusing
         // a nearby sample avoids rebuilding the full blur graph on each tick;
         // a larger change still refreshes the cache for final quality.
@@ -1086,7 +1109,8 @@ ID2D1Bitmap* WindowMaterial::EnsureSampled(ID2D1DeviceContext* dc, const D2D1_RE
     }
 
     const Recipe recipe = RecipeFor(effect, dark);
-    const float blur_std = recipe.blur_std * (static_cast<float>(sw) / dw);
+    const float blur_std = recipe.blur_std * (std::max)(0.0f, blur_scale) *
+                           (static_cast<float>(sw) / dw);
     const D2D1_SIZE_F size = source->GetSize();
     const D2D1_RECT_F cover = CoverRect(size.width, size.height,
                                         D2D1::RectF(-1.0f, -1.0f,
@@ -1135,6 +1159,7 @@ ID2D1Bitmap* WindowMaterial::EnsureSampled(ID2D1DeviceContext* dc, const D2D1_RE
     sampled_path_ = path;
     sampled_effect_ = effect;
     sampled_dark_ = dark;
+    sampled_blur_scale_ = blur_scale;
     sampled_w_ = sw;
     sampled_h_ = sh;
     sampled_dc_ = dc;
@@ -1142,11 +1167,12 @@ ID2D1Bitmap* WindowMaterial::EnsureSampled(ID2D1DeviceContext* dc, const D2D1_RE
 }
 
 bool WindowMaterial::DrawBackdrop(ID2D1DeviceContext* dc, const D2D1_RECT_F& dest,
-                                  WindowEffect effect, bool dark, const std::wstring& path) {
+                                  WindowEffect effect, bool dark, const std::wstring& path,
+                                  float blur_scale) {
     if (!dc || path.empty() || effect == WindowEffect::None || IsHighContrast() || !compat::ModernWindows()) {
         return false;
     }
-    ID2D1Bitmap* sampled = EnsureSampled(dc, dest, effect, dark, path);
+    ID2D1Bitmap* sampled = EnsureSampled(dc, dest, effect, dark, path, blur_scale);
     if (!sampled) return false;
     dc->DrawBitmap(sampled, dest, 1.0f, D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC,
                    nullptr, nullptr);

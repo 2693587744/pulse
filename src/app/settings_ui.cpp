@@ -430,4 +430,42 @@ bool SysCtxPreviewDragCancel(AppState& s) {
     InvalidateRect(s.hwnd,nullptr,FALSE);
     return true;
 }
+
+// Settings page scrollbar: a press on the track puts the thumb's middle under
+// the pointer, a press on the thumb grabs it where it was touched. The move
+// keeps the grabbed offset, so the thumb never jumps away from the pointer.
+bool BeginSettingsScrollbarDrag(AppState& s, const ui::WindowViewModel& vm, int y) {
+    D2D1_RECT_F track{},thumb{};
+    float maximum=0.0f;
+    if(!s.renderer.SettingsScrollbarGeometry(vm,static_cast<float>(s.compositor.Width()),
+        static_cast<float>(s.compositor.Height()),track,thumb,maximum)) return false;
+    const float travel=(std::max)(1.0f,(track.bottom-track.top)-(thumb.bottom-thumb.top));
+    const bool outside=y<thumb.top || y>=thumb.bottom;
+    if(outside) {
+        const float value=std::clamp((static_cast<float>(y)-track.top
+            -(thumb.bottom-thumb.top)*0.5f)*maximum/travel,0.0f,maximum);
+        s.settings.SetScroll(value,maximum);
+        s.scrollbarDragStartScroll=value;
+    } else {
+        s.scrollbarDragStartScroll=s.settings.scroll();
+    }
+    s.scrollbarGrabOffset=outside ? (thumb.bottom-thumb.top)*0.5f : static_cast<float>(y)-thumb.top;
+    s.scrollbarDragStartY=y;
+    s.scrollbarDragging=true;
+    s.scrollbarSettings=true;
+    return true;
+}
+
+void DragSettingsScrollbar(AppState& s, int y) {
+    const ui::WindowViewModel vm=BuildVm(s,false);
+    D2D1_RECT_F track{},thumb{};
+    float maximum=0.0f;
+    if(!s.renderer.SettingsScrollbarGeometry(vm,static_cast<float>(s.compositor.Width()),
+        static_cast<float>(s.compositor.Height()),track,thumb,maximum)) return;
+    const float travel=(std::max)(1.0f,(track.bottom-track.top)-(thumb.bottom-thumb.top));
+    const float value=std::clamp(s.scrollbarDragStartScroll
+        +(static_cast<float>(y)-static_cast<float>(s.scrollbarDragStartY))*maximum/travel,
+        0.0f,maximum);
+    s.settings.SetScroll(value,maximum);
+}
 } // namespace pulse

@@ -235,6 +235,13 @@ HitTestResult MainRenderer::HitTest(const WindowViewModel& vm, const D2D1_RECT_F
             }
         }
         if (ContainsPt(lay.content, x, y)) {
+            // The page scrollbar runs along the content's right edge; 3 keeps it
+            // apart from the pane (0), horizontal (1) and sidebar (2) bars.
+            if (SettingsScrollbarHitArea(lay, scale_, x, y)) {
+                r.region = HitTestResult::Scrollbar;
+                r.sub_index = 3;
+                return r;
+            }
             // 右键菜单 layer card 系统右键菜单 (the Pulse card is the current page).
             if (ContainsPt(lay.ctx_layer[1], x, y)) {
                 r.region = HitTestResult::SettingsCtxPivot; r.index = 6; return r;

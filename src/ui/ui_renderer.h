@@ -1583,7 +1583,11 @@ public:
                           std::vector<BreadcrumbPlaced>& out) const;
 
     void Render(const WindowViewModel& vm, const D2D1_RECT_F& rect, const Theme& theme);
-    void InvalidateWallpaper() { material_.Invalidate(); }
+    void InvalidateWallpaper() {
+        material_.Invalidate();
+        wallpaper_path_.clear();
+        wallpaper_path_resolved_ = false;
+    }
 
     HitTestResult HitTest(const WindowViewModel& vm, const D2D1_RECT_F& rect,
                           float x, float y) const;
@@ -1645,6 +1649,11 @@ public:
     void FreezeTabWidths(const WindowViewModel& vm, float window_w);
     bool ReleaseTabWidths();
     float SettingsMaxScroll(const WindowViewModel& vm, float window_w, float window_h) const;
+    // Settings page scrollbar geometry, shared by the press and the drag so the
+    // grabbed thumb is the drawn one.
+    bool SettingsScrollbarGeometry(const WindowViewModel& vm, float window_w, float window_h,
+                                   D2D1_RECT_F& track, D2D1_RECT_F& thumb,
+                                   float& max_scroll) const;
     D2D1_RECT_F SettingsDropdownBounds(const WindowViewModel& vm, int index, float window_w, float window_h) const;
     float SettingsDestinationOffset(const WindowViewModel& vm, int setting_id, float window_w, float window_h) const;
     float SidebarMaxScroll(const WindowViewModel& vm, float window_w, float window_h) const;
@@ -1816,6 +1825,11 @@ private:
     ID2D1Bitmap* LogoBitmap();
 
     WindowMaterial material_;
+    // Windows builds without a DWM backdrop sample the desktop wallpaper so the
+    // Mica/Acrylic tiles still change the window. Resolved once per wallpaper.
+    const std::wstring& WallpaperPath();
+    std::wstring wallpaper_path_;
+    bool wallpaper_path_resolved_ = false;
     Compositor* compositor_ = nullptr;
     fluent::Painter painter_;
     // Icon and thumbnail caches (render_caches.h): shared through AppCore, or

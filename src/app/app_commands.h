@@ -188,6 +188,10 @@ void ApplySettingsEffects(AppState& s, app::SettingsEffect effects);
 app::SettingsTaskCompletion SettingsCompletion(HWND hwnd);
 void SetThemeMode(AppState& s, int mode);
 bool HandleSettingsControl(AppState& s, const ui::HitTestResult& hit);
+// Settings page scrollbar (settings_ui.cpp): the press jumps the thumb under
+// the pointer when it lands on the track, the move keeps the drag going.
+bool BeginSettingsScrollbarDrag(AppState& s, const ui::WindowViewModel& vm, int y);
+void DragSettingsScrollbar(AppState& s, int y);
 // 系统右键菜单 live preview drag (settings_ui.cpp): true when it handled the message.
 bool SysCtxPreviewDragMove(AppState& s, int x, int y, WPARAM buttons);
 bool SysCtxPreviewDragEnd(AppState& s, int x, int y);

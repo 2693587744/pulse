@@ -102,12 +102,16 @@ void ClearTextWidthCache() {
     }
     // transparency: 0..90 slider; 25/50/75 reproduce the former
     // subtle/balanced/vivid tables exactly.
-    inline LayerAlphas ComputeLayerAlphas(bool image_mode, bool backdrop_drawn,
+    // image_base: the window base is the user's background image, drawn as-is
+    // for None or sampled as material for Acrylic/Mica. That image is the
+    // whole point of the setting, so it replaces the sheet and card plates
+    // instead of sitting under them (only the title scrim still scales).
+    inline LayerAlphas ComputeLayerAlphas(bool image_base, bool backdrop_drawn,
                                           bool backdrop_enabled, bool dark,
                                           int transparency, int wallpaper_blur) noexcept {
         LayerAlphas a;
         const float t = static_cast<float>(std::clamp(transparency, 0, 90)) / 100.0f;
-        if (image_mode) {
+        if (image_base) {
             // Decode failure stays opaque rather than exposing the desktop.
             if (!backdrop_drawn) return a;
             // Dark wallpaper uses the legacy single scrim. Balanced restores
@@ -142,6 +146,12 @@ void ClearTextWidthCache() {
     }
     inline float WallpaperBlurDip(int wallpaper_blur) noexcept {
         return static_cast<float>(std::clamp(wallpaper_blur, 0, 40));
+    }
+    // 背景图模糊 default that leaves the sampled Acrylic/Mica material looking
+    // as it always did; the slider scales the material blur against it.
+    constexpr float kStockWallpaperBlurDip = 14.0f;
+    inline float WallpaperBlurScale(int wallpaper_blur) noexcept {
+        return WallpaperBlurDip(wallpaper_blur) / kStockWallpaperBlurDip;
     }
     constexpr int kPanelTransparencyMax = 90;
     constexpr int kWallpaperBlurMax = 40;
@@ -2204,6 +2214,28 @@ struct SettingsLayout {
     float content_origin = 0.0f;
     float content_h = 0.0f;
 };
+
+// Settings page scrollbar. Painting, hit testing and dragging share this spec
+// so the strip the pointer grabs is the strip that was drawn.
+inline fluent::ScrollbarSpec SettingsScrollbarSpec(const SettingsLayout& layout, float scroll,
+                                                   float scale) {
+    fluent::ScrollbarSpec bar;
+    bar.viewport = D2D1::RectF(layout.content.right - 10.0f * scale, layout.content.top,
+                               layout.content.right - 2.0f * scale, layout.content.bottom);
+    bar.viewport_extent = (std::max)(0.0f, layout.content.bottom - layout.content.top);
+    bar.content_extent = layout.content_h;
+    bar.offset = scroll;
+    bar.expand_progress = 1.0f;
+    return bar;
+}
+
+// Pointer zone: the strip is thin, so the grab area keeps a few DIPs to its
+// left. Settings controls stop 20 DIPs before the content edge.
+inline bool SettingsScrollbarHitArea(const SettingsLayout& layout, float scale, float x, float y) {
+    return layout.content_h > layout.content.bottom - layout.content.top + 1.0f &&
+        y >= layout.content.top && y < layout.content.bottom &&
+        x >= layout.content.right - 13.0f * scale && x < layout.content.right;
+}
 
 std::wstring FileNameOf(const std::wstring& path) {
     const size_t slash = path.find_last_of(L"\\/");
