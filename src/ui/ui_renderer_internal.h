@@ -107,7 +107,8 @@ void ClearTextWidthCache() {
         return static_cast<float>(std::clamp(wallpaper_blur, 0, 40));
     }
     // 背景图模糊 default that leaves the sampled Acrylic/Mica material looking
-    // as it always did; the slider scales the material blur against it.
+    // as it always did; the slider scales the material blur against it, so
+    // 关闭 (0) keeps the image sharp.
     constexpr float kStockWallpaperBlurDip = 14.0f;
     inline float WallpaperBlurScale(int wallpaper_blur) noexcept {
         return WallpaperBlurDip(wallpaper_blur) / kStockWallpaperBlurDip;

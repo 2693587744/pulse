@@ -4405,7 +4405,7 @@ enum class StringId : UINT {
     LockCloseLead = IDS_LOCK_CLOSE_LEAD,
     LockCloseEnd = IDS_LOCK_CLOSE_END,
     LockWaiting = IDS_LOCK_WAITING,
-    LockRetryNow = IDS_LOCK_RETRY_NOW,
+    LockReleaseNow = IDS_LOCK_RELEASE_NOW,
     OpAuthTitleCopy = IDS_OP_AUTH_TITLE_COPY,
     OpAuthTitleMove = IDS_OP_AUTH_TITLE_MOVE,
     OpAuthTitleDelete = IDS_OP_AUTH_TITLE_DELETE,

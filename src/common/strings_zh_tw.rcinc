@@ -4393,7 +4393,7 @@ BEGIN
     IDS_LOCK_CLOSE_LEAD "在下面的程式裡關閉它，"
     IDS_LOCK_CLOSE_END "會自動繼續。"
     IDS_LOCK_WAITING "正在等待檔案釋放…"
-    IDS_LOCK_RETRY_NOW "立即重試"
+    IDS_LOCK_RELEASE_NOW "立即釋放"
     IDS_OP_AUTH_TITLE_COPY "複製到這裡需要系統管理員權限"
     IDS_OP_AUTH_TITLE_MOVE "移動到這裡需要系統管理員權限"
     IDS_OP_AUTH_TITLE_DELETE "刪除這些項目需要系統管理員權限"

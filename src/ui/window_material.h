@@ -86,8 +86,8 @@ public:
 
     // Paints the sampled material. Returns false when there is nothing to sample
     // (no path, None, high contrast, or decode failure) so the caller can use DWM.
-    // blur_scale multiplies the recipe's blur: 1 is the stock material, 0 keeps
-    // the image sharp, >1 blurs it further (the 背景图模糊 slider).
+    // blur_scale scales the recipe's blur (背景图模糊: 0 keeps the image sharp,
+    // 1 at the stock 14 DIP, larger values blur it further).
     bool DrawBackdrop(ID2D1DeviceContext* dc, const D2D1_RECT_F& dest,
                       WindowEffect effect, bool dark, const std::wstring& path,
                       float blur_scale = 1.0f);
@@ -110,6 +110,12 @@ private:
     };
 
     static Recipe RecipeFor(WindowEffect effect, bool dark) noexcept;
+    // Opacities used when Pulse paints the window base itself.
+    struct MaterialStrength {
+        float luminosity = 1.0f;
+        float tint_opacity = 0.0f;
+    };
+    static MaterialStrength SelfPaintedStrength(WindowEffect effect) noexcept;
     void EnsureDecodeWorker();
     ID2D1Bitmap* SourceBitmapAt(const std::wstring& path, UINT max_edge);
     void QueueDecode(const std::wstring& path, UINT max_edge);

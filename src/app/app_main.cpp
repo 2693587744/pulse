@@ -3446,7 +3446,19 @@ LRESULT CALLBACK WndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                 }
             }
         }
-        if (last_window) PostQuitMessage(0);
+        if (last_window) {
+            // 退出时停掉 PulseIndex 服务：否则它会一直持有便携版目录里的文件，
+            // 删除旧版本时只报“被 Pulse Index 占用”。下次启动由
+            // IndexClient::StartStoppedService 重新拉起，索引数据不丢。
+            // HandOffAtExit 已启动退出看门狗（2 秒后强制结束进程），所以这里
+            // 只能等很短的时间，超时就先退出，服务留给下次启动处理。
+            const ULONGLONG stop_started = GetTickCount64();
+            const bool service_stopped = index::StopIndexServiceOnExit(1700);
+            diagnostics::runtime::Event("exit_index_service",
+                {{"stopped", static_cast<uint64_t>(service_stopped ? 1 : 0)},
+                 {"ms", GetTickCount64() - stop_started}});
+            PostQuitMessage(0);
+        }
         return 0;
     }
     }

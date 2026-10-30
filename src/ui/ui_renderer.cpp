@@ -1197,9 +1197,9 @@ void MainRenderer::Render(const WindowViewModel& vm, const D2D1_RECT_F& rect,
         // cannot ask DWM for a backdrop sample the wallpaper instead of leaving
         // the effect tiles doing nothing.
         material_image = vm.background_image;
-        // 背景图模糊 scales the sampled material the same way it scales the
-        // image drawn for None; the desktop-wallpaper fallback keeps the stock
-        // recipe because that slider is about the user's own image.
+        // 背景图模糊 scales the sampled material's blur the same way it scales
+        // the image drawn for None; the desktop-wallpaper fallback keeps the
+        // stock recipe because that slider is about the user's own image.
         float material_blur = 1.0f;
         if (material_image.empty() && !SystemSupportsDwmBackdrop())
             material_image = WallpaperPath();
