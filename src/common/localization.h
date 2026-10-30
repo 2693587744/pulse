@@ -598,6 +598,7 @@ enum class StringId : UINT {
     ExternalOpenSmart = IDS_EXTERNAL_OPEN_SMART,
     ExternalOpenTab = IDS_EXTERNAL_OPEN_TAB,
     ExternalOpenWindow = IDS_EXTERNAL_OPEN_WINDOW,
+    ExternalOpenActivate = IDS_EXTERNAL_OPEN_ACTIVATE,
     OpenedInNewWindow = IDS_OPENED_IN_NEW_WINDOW,
     OpenedInTab = IDS_OPENED_IN_TAB,
     OpenConvertToTab = IDS_OPEN_CONVERT_TO_TAB,

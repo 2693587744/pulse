@@ -4185,6 +4185,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow) {
         return 1;
     }
     state.open_path = std::move(normalized_launch);
+    // 只呼出: a cold start (Win+E with no running Pulse) opens an empty window
+    // instead of the folder it was handed.
+    if (state.appPrefs.external_open == 3) state.open_path.clear();
     if (shell_tag) {
         if (!app::SingleInstanceCoordinator::NormalizeLaunchPath(shell_tag->path, normalized_launch) ||
             normalized_launch.empty() || normalized_launch.starts_with(L"pulse:") ||
